@@ -134,4 +134,10 @@
 - Configure environment variables and start the Node.js application and ensure the React frontend communicates with the Express backend.
 <img width="1596" height="992" alt="image" src="https://github.com/user-attachments/assets/07fb9503-5dc1-47a0-a786-3ab562c8ea2d" />
 
+### 5. Verification:
+- Application is running properly and data is getting saved to mongodb
+<img width="1917" height="897" alt="image" src="https://github.com/user-attachments/assets/4b9d0c08-858a-47a3-8857-1faa5cd7c1be" />
+
+
+
 
