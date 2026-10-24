@@ -6,7 +6,7 @@
 
 <img width="1457" height="660" alt="image" src="https://github.com/user-attachments/assets/d98076e7-47b9-487b-af38-9b2ee137a974" />
 
-## Part 1: Infrastructure Setup with Terraform 
+
 ### 1. AWS Setup and Terraform Initialization:
 - Configure AWS CLI and authenticate with your AWS account.
 <img width="1325" height="300" alt="image" src="https://github.com/user-attachments/assets/086a997b-db88-4a6a-8273-6969a9b16458" />
@@ -100,5 +100,38 @@
 ### 5. Resource Output: 
 - Output the public IP of the web server EC2 instance.
 <img width="1042" height="310" alt="image" src="https://github.com/user-attachments/assets/f1347cf8-03ca-4a01-849d-09c46ec30d4a" />
+
+
+# Deploying steps of Ansible:
+# Create the Ansible directory
+<img width="916" height="400" alt="image" src="https://github.com/user-attachments/assets/d76df0aa-16de-4812-8589-9db6b1b1df7d" />
+
+## Part 2: Configuration and Deployment with Ansible
+
+### 1. Ansible Configuration:
+- Configure Ansible to communicate with the AWS EC2 instances.
+<img width="1346" height="627" alt="image" src="https://github.com/user-attachments/assets/1c07163c-ad45-4c97-bf3c-86252a74947c" />
+<img width="1225" height="266" alt="image" src="https://github.com/user-attachments/assets/45b88e9c-5c1e-45c4-b890-9fc1b7cdffc8" />
+
+
+
+### 2. Web Server Setup:
+
+- Write an Ansible playbook to install Node.js and NPM on the web server and Clone the MERN application repository and install dependencies.
+<img width="1917" height="900" alt="image" src="https://github.com/user-attachments/assets/595afdef-742d-41c0-b997-05a5b4a5524b" />
+<img width="1391" height="1000" alt="image" src="https://github.com/user-attachments/assets/2adab546-42aa-49d0-8d55-87b8ed844c04" />
+
+
+ 
+### 3. Database Server Setup: 
+- Install and configure MongoDB on the database server using Ansible and Secure the MongoDB instance and create necessary users and databases
+<img width="1417" height="992" alt="image" src="https://github.com/user-attachments/assets/70d20c3e-c49f-4df5-8a24-5b7e0c8274a4" />
+<img width="1581" height="1011" alt="image" src="https://github.com/user-attachments/assets/8ce9bdba-6b1f-44b6-ae6e-cff87d6f0b55" />
+
+
+
+### 4. Application Deployment: 
+- Configure environment variables and start the Node.js application and ensure the React frontend communicates with the Express backend.
+<img width="1596" height="992" alt="image" src="https://github.com/user-attachments/assets/07fb9503-5dc1-47a0-a786-3ab562c8ea2d" />
 
 
