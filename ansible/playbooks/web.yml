@@ -1,0 +1,98 @@
+---
+- name: Configure Web Server
+  hosts: web
+  become: true
+
+  tasks:
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - git
+          - nginx
+          - ca-certificates
+        state: present
+
+    - name: Check Node.js installation
+      ansible.builtin.command:
+        cmd: node --version
+      register: node_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install Node.js 20 repository
+      ansible.builtin.shell: |
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      when: node_version.rc != 0
+
+    - name: Install Node.js and npm
+      ansible.builtin.apt:
+        name:
+          - nodejs
+        state: present
+        update_cache: true
+
+    - name: Check PM2 installation
+      ansible.builtin.command:
+        cmd: pm2 --version
+      register: pm2_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install PM2
+      community.general.npm:
+        name: pm2
+        global: true
+        state: present
+      when: pm2_version.rc != 0
+
+    - name: Enable and start Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Verify Node.js
+      ansible.builtin.command:
+        cmd: node --version
+      register: node_check
+      changed_when: false
+
+    - name: Verify npm
+      ansible.builtin.command:
+        cmd: npm --version
+      register: npm_check
+      changed_when: false
+
+    - name: Verify Git
+      ansible.builtin.command:
+        cmd: git --version
+      register: git_check
+      changed_when: false
+
+    - name: Verify PM2
+      ansible.builtin.command:
+        cmd: pm2 --version
+      register: pm2_check
+      changed_when: false
+
+    - name: Verify Nginx
+      ansible.builtin.command:
+        cmd: nginx -v
+      register: nginx_check
+      changed_when: false
+
+    - name: Display installed versions
+      ansible.builtin.debug:
+        msg:
+          - "Node.js: {{ node_check.stdout }}"
+          - "npm: {{ npm_check.stdout }}"
+          - "Git: {{ git_check.stdout }}"
+          - "PM2: {{ pm2_check.stdout }}"
+          - "Nginx: {{ nginx_check.stderr }}"

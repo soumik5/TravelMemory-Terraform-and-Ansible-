@@ -1,0 +1,136 @@
+- name: Deploy MERN application
+  hosts: web
+  become: true
+
+  vars:
+    app_repo: "https://github.com/soumik5/TravelMemory-Terraform-and-Ansible-.git"
+    app_dir: "/opt/TravelMemory-Terraform-and-Ansible-"
+
+  tasks:
+
+    - name: Clone MERN application repository
+      ansible.builtin.git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: main
+        update: true
+
+    - name: Set application ownership
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: true
+
+    - name: Create backend environment file
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/backend/.env"
+        content: |
+          PORT=3001
+          MONGO_URI=mongodb://10.0.2.226:27017/TravelMemory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0600"
+
+    - name: Install backend dependencies
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: "{{ app_dir }}/backend"
+      become_user: ubuntu
+
+    - name: Check if backend is already running in PM2
+      ansible.builtin.command:
+        cmd: pm2 describe travelmemory-backend
+      become_user: ubuntu
+      environment:
+        PM2_HOME: /home/ubuntu/.pm2
+      register: pm2_backend
+      changed_when: false
+      failed_when: false
+
+    - name: Start backend with PM2
+      ansible.builtin.command:
+        cmd: pm2 start index.js --name travelmemory-backend
+        chdir: "{{ app_dir }}/backend"
+      become_user: ubuntu
+      environment:
+        PM2_HOME: /home/ubuntu/.pm2
+      when: pm2_backend.rc != 0
+
+    - name: Save PM2 process list
+      ansible.builtin.command:
+        cmd: pm2 save
+      become_user: ubuntu
+      environment:
+        PM2_HOME: /home/ubuntu/.pm2
+
+    - name: Install frontend dependencies
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: "{{ app_dir }}/frontend"
+      become_user: ubuntu
+
+    - name: Create frontend environment file
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/frontend/.env"
+        content: |
+          REACT_APP_BACKEND_URL=http://13.206.165.178
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Build React frontend
+      ansible.builtin.command:
+        cmd: npm run build
+        chdir: "{{ app_dir }}/frontend"
+      become_user: ubuntu
+
+    - name: Create Nginx configuration for MERN application
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/mern-app
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              root {{ app_dir }}/frontend/build;
+              index index.html;
+
+              location / {
+                  try_files $uri /index.html;
+              }
+
+              location /trip {
+                  proxy_pass http://127.0.0.1:3001;
+                  proxy_http_version 1.1;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Disable default Nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Enable MERN Nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/mern-app
+        dest: /etc/nginx/sites-enabled/mern-app
+        state: link
+
+    - name: Test Nginx configuration
+      ansible.builtin.command:
+        cmd: nginx -t
+      changed_when: false
+
+    - name: Reload Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded

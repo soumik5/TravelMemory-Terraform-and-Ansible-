@@ -1,0 +1,104 @@
+---
+- name: Configure MongoDB server
+  hosts: mongodb
+  become: true
+
+  vars:
+    mongodb_key_url: "https://www.mongodb.org/static/pgp/server-8.0.asc"
+    mongodb_keyring: "/usr/share/keyrings/mongodb-server-8.0.gpg"
+    mongodb_repo: "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse"
+
+  tasks:
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - curl
+          - ca-certificates
+        state: present
+        update_cache: true
+
+    - name: Check MongoDB GPG key
+      ansible.builtin.stat:
+        path: "{{ mongodb_keyring }}"
+      register: mongodb_key
+
+    - name: Download MongoDB GPG key
+      ansible.builtin.get_url:
+        url: "{{ mongodb_key_url }}"
+        dest: /tmp/mongodb-server-8.0.asc
+        mode: "0644"
+      when: not mongodb_key.stat.exists
+
+    - name: Convert MongoDB GPG key
+      ansible.builtin.command:
+        cmd: >
+          gpg --dearmor
+          -o {{ mongodb_keyring }}
+          /tmp/mongodb-server-8.0.asc
+        creates: "{{ mongodb_keyring }}"
+      when: not mongodb_key.stat.exists
+
+    - name: Add MongoDB repository
+      ansible.builtin.apt_repository:
+        repo: "{{ mongodb_repo }}"
+        filename: mongodb-org-8.0
+        state: present
+        update_cache: true
+
+    - name: Install MongoDB
+      ansible.builtin.apt:
+        name: mongodb-org
+        state: present
+        update_cache: true
+
+    - name: Remove incorrectly placed bindIp
+      ansible.builtin.replace:
+        path: /etc/mongod.conf
+        regexp: '(?m)^#auditLog:\n  bindIp: 0\.0\.0\.0$'
+        replace: '#auditLog:'
+        backup: true
+      notify: Restart MongoDB
+
+    - name: Configure MongoDB bind IP
+      ansible.builtin.lineinfile:
+        path: /etc/mongod.conf
+        regexp: '^  bindIp:'
+        line: "  bindIp: 0.0.0.0"
+        insertafter: '^net:'
+      notify: Restart MongoDB
+
+    - name: Start and enable MongoDB
+      ansible.builtin.systemd:
+        name: mongod
+        state: started
+        enabled: true
+
+    - name: Verify MongoDB service
+      ansible.builtin.command:
+        cmd: systemctl is-active mongod
+      register: mongodb_service
+      changed_when: false
+      failed_when: mongodb_service.stdout.strip() != "active"
+
+    - name: Verify MongoDB port
+      ansible.builtin.wait_for:
+        host: "{{ ansible_default_ipv4.address }}"
+        port: 27017
+        state: started
+        timeout: 10
+
+    - name: Display MongoDB status
+      ansible.builtin.debug:
+        msg:
+          - "MongoDB service is active"
+          - "MongoDB is listening on port 27017"
+          - "MongoDB server IP: {{ ansible_default_ipv4.address }}"
+
+  handlers:
+
+    - name: Restart MongoDB
+      ansible.builtin.systemd:
+        name: mongod
+        state: restarted
